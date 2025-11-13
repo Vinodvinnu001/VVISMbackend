@@ -95,7 +95,7 @@ app.post("/send-mail", upload.single("file"), async (req, res) => {
 
     const adminMailOptions  = {
       from: `"Student Certificate Verification" <${process.env.EMAIL_USER}>`,
-      to: "vishwavishwanidrive@gmail.com, website@vishwavishwani.ac.in",
+      to: "eduverify@vishwavishwani.ac.in",
       subject: `Student Certificate Verification from ${applicantName}`,
       html: htmlBodyAdmin,
     };
