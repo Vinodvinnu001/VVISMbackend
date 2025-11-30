@@ -1,0 +1,52 @@
+{
+  "bba": [
+    {
+      "id": "MoU-Brainovision",
+      "title": "MoU between Vishwa Vishwani Institutions and Brainovision Solutions India Pvt. Ltd.",
+      "description": [
+        "Vishwa Vishwani Institutions has signed a Memorandum of Understanding (MoU) with Brainovision Solutions India Pvt. Ltd. to strengthen industry-academic collaboration.",
+        "This MoU aims to enhance students' skills by providing training, internships, workshops, and certification courses in emerging technologies."
+      ],
+      "images": [
+        "https://drive.google.com/file/d/1bTJ0Q5FNbtywaDBv65ZMy-foqeEyrgGh/view?usp=drive_link"
+      ]
+    },
+    {
+      "id": "sports-meet",
+      "title": "Faculty Development Program (FDP) on Research Methodology",
+      "description": [
+        "Vishwa Vishwani Institutions successfully conducted an FDP on Research Methodology aimed at enhancing research skills among faculty.",
+        "The FDP focused on identifying research gaps, developing research models, and hypothesis building."
+      ],
+      "images": [
+        "https://drive.google.com/file/d/17yPA31PX5GPbVLH8fl5MXBrMw8AKiXxv/view?usp=drive_link"
+      ]
+    }
+  ],
+
+  "mba": [
+    {
+      "id": "anti-drug-awareness",
+      "title": "Anti-Drug Awareness Programme",
+      "description": [
+        "An Anti-Drug Awareness Programme was conducted at Vishwa Vishwani Campus in collaboration with the Cyberabad Police Commissionerate.",
+        "Students took a pledge against drug abuse and actively participated in awareness activities."
+      ],
+      "images": [
+        "https://drive.google.com/file/d/1SeZ1kww6LDw5D7hCjnyU29LmryVcn7Y4/view?usp=drive_link",
+        "https://drive.google.com/file/d/1qOfvGNFaoanUC5A-deCUCFuDF2HTMtRy/view?usp=drive_link"
+      ]
+    },
+    {
+      "id": "startup-madness",
+      "title": "Guest Talk on Startup Madness",
+      "description": [
+        "Mr. Harshvardhan Jain, Founder of FlapLive, delivered an insightful session on Startup Madness.",
+        "He shared practical experiences and lessons from the startup ecosystem."
+      ],
+      "images": [
+        "https://drive.google.com/file/d/1vSO2qzKoGMmzDVg1sH56TtbKDROwiJ61/view?usp=drive_link"
+      ]
+    }
+  ]
+}
