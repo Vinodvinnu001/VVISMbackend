@@ -5,6 +5,8 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import { v2 as cloudinary } from "cloudinary";
 import streamifier from "streamifier";
+import { v4 as uuidv4 } from "uuid";
+import jwt from "jsonwebtoken";
 
 dotenv.config();
 
@@ -21,6 +23,15 @@ cloudinary.config({
 
 // ⚙️ Multer setup (for handling file upload)
 const upload = multer({ storage: multer.memoryStorage() });
+
+// 📨 Email configuration
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 // 📧 Email route
 app.post("/send-mail", upload.single("file"), async (req, res) => {
@@ -59,15 +70,6 @@ app.post("/send-mail", upload.single("file"), async (req, res) => {
       fileUrl = result.secure_url;
       console.log("✅ File uploaded to Cloudinary:", fileUrl);
     }
-
-    // 📨 Email configuration
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
 
     // 📄 Email template
     const htmlBodyAdmin  = `
@@ -135,6 +137,76 @@ app.post("/send-mail", upload.single("file"), async (req, res) => {
   } catch (error) {
     console.error("❌ Error:", error);
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post("/send-brochure-link", async (req, res) => {
+  try {
+    const { name, email, mobile } = req.body;
+
+    if (!name || !email || !mobile) {
+      return res.status(400).json({ success: false });
+    }
+
+    // ✅ Create token (valid for 10 mins)
+    const token = jwt.sign(
+      { email, name },
+      process.env.JWT_SECRET,
+      { expiresIn: "10m" }
+    );
+
+    const verifyLink = `https://vishwavishwani.ac.in/pgdm/verify-brochure?token=${token}`;
+
+    await transporter.sendMail({
+      from: `"Vishwa Vishwani" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Verify Email to Download Brochure",
+      html: `
+        <h3>Hello ${name},</h3>
+        <p>Click below to verify and download brochure:</p>
+        <a href="${verifyLink}" style="padding:10px 20px;background:#0d6efd;color:#fff;">
+          Verify & Download
+        </a>
+        <p>This link expires in 10 minutes.</p>
+      `,
+    });
+
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false });
+  }
+});
+
+app.get("/verify-brochure", (req, res) => {
+  const { token } = req.query;
+
+  try {
+    jwt.verify(token, process.env.JWT_SECRET);
+
+    // ✅ If valid → redirect to download
+    return res.redirect(
+      `https://vishwavishwani.ac.in/pgdm/download-brochure?token=${token}`
+    );
+
+  } catch (err) {
+    return res.status(400).send("Invalid or expired link");
+  }
+});
+
+app.get("/get-brochure", (req, res) => {
+  const { token } = req.query;
+
+  try {
+    jwt.verify(token, process.env.JWT_SECRET);
+
+    res.json({
+      url: "https://drive.google.com/file/d/1z41i-F0KOe8qORQKY03WK5lBFFtEw7ku/view"
+    });
+
+  } catch (err) {
+    res.status(403).json({ message: "Unauthorized" });
   }
 });
 
