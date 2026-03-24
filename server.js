@@ -5,7 +5,6 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import { v2 as cloudinary } from "cloudinary";
 import streamifier from "streamifier";
-import { v4 as uuidv4 } from "uuid";
 import jwt from "jsonwebtoken";
 
 dotenv.config();
@@ -127,7 +126,7 @@ app.post("/send-mail", upload.single("file"), async (req, res) => {
         <p>Thank you for reaching out to <b>Vishwa Vishwani</b>.</p>
         <p>Best regards,</p>
         <p><b>Vishwa Vishwani Institute of Systems and Management</b></p>
-        <img src="https://www.vishwavishwani.ac.in/pgdm/images/vvism-logo.webp" alt="Vishwa Vishwani Logo" width="160" style="margin-top:10px;" />
+        <img src="https://drive.google.com/file/d/1bhCi407mjyA4XlQ_mHp1vp_5-I1s34N4/view?usp=drive_link" alt="Vishwa Vishwani Logo" width="160" style="margin-top:10px;" />
       `,
     };
 
@@ -142,39 +141,70 @@ app.post("/send-mail", upload.single("file"), async (req, res) => {
 
 app.post("/send-brochure-link", async (req, res) => {
   try {
-    const { name, email, mobile } = req.body;
+    const { name, email, mobile, reportType } = req.body;
 
     if (!name || !email || !mobile) {
       return res.status(400).json({ success: false });
     }
 
-    // ✅ Create token (valid for 10 mins)
+    // ✅ Map reports
+    const reports = {
+      "2024-26": "https://drive.google.com/uc?export=download&id=1IYt31686fGNozt71ndnHevlMvka-gBZ6",
+      "2023-25": "https://drive.google.com/uc?export=download&id=1z41i-F0KOe8qORQKY03WK5lBFFtEw7ku"
+    };
+
+    const downloadLink = reports[reportType];
+
+    if (!downloadLink) {
+      return res.status(400).json({ success: false, message: "Invalid report type" });
+    }
+
+    // ✅ Create JWT with download link
     const token = jwt.sign(
-      { email, name },
+      { email, name, mobile, downloadLink },
       process.env.JWT_SECRET,
       { expiresIn: "10m" }
     );
 
     const verifyLink = `https://vishwavishwani.ac.in/pgdm/verify-brochure?token=${token}`;
 
+    // 📧 USER EMAIL
     await transporter.sendMail({
       from: `"Vishwa Vishwani" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: "Verify Email to Download Brochure",
+      subject: `Download ${reportType} Placement Report`,
       html: `
         <h3>Hello ${name},</h3>
-        <p>Click below to verify and download brochure:</p>
-        <a href="${verifyLink}" style="padding:10px 20px;background:#0d6efd;color:#fff;">
+        <p>You requested <b>${reportType} Placement Report</b>.</p>
+        <p>Click below to verify and download:</p>
+        <a href="${verifyLink}" style="padding:10px 20px;background:#0d6efd;color:#fff;text-decoration:none;">
           Verify & Download
         </a>
         <p>This link expires in 10 minutes.</p>
       `,
     });
 
+    // 📩 ADMIN EMAIL
+    await transporter.sendMail({
+      from: `"Brochure Enquiry" <${process.env.EMAIL_USER}>`,
+      to: "website@vishwavishwani.ac.in",
+      subject: "New Placement Report Request",
+      html: `
+        <h3>New Report Request</h3>
+        <table border="1" cellpadding="8" cellspacing="0">
+          <tr><th>Name</th><td>${name}</td></tr>
+          <tr><th>Email</th><td>${email}</td></tr>
+          <tr><th>Mobile</th><td>${mobile}</td></tr>
+          <tr><th>Report</th><td>${reportType}</td></tr>
+          <tr><th>Time</th><td>${new Date().toLocaleString()}</td></tr>
+        </table>
+      `,
+    });
+
     res.json({ success: true });
 
   } catch (error) {
-    console.error(error);
+    console.error("❌ ERROR:", error);
     res.status(500).json({ success: false });
   }
 });
@@ -199,14 +229,14 @@ app.get("/get-brochure", (req, res) => {
   const { token } = req.query;
 
   try {
-    jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     res.json({
-      url: "https://drive.google.com/file/d/1z41i-F0KOe8qORQKY03WK5lBFFtEw7ku/view"
+      url: decoded.downloadLink
     });
 
   } catch (err) {
-    res.status(403).json({ message: "Unauthorized" });
+    res.status(403).json({ message: "Unauthorized or expired link" });
   }
 });
 
@@ -216,7 +246,7 @@ app.get("/", (req, res) => {
 });
 
 // 🚀 Start server
-// app.listen(process.env.PORT || 5000, () => {
-//   console.log(`✅ Server running on port ${process.env.PORT || 5000}`);
-// });
+app.listen(process.env.PORT || 5000, () => {
+  console.log(`✅ Server running on port ${process.env.PORT || 5000}`);
+});
 export default app;
