@@ -21,7 +21,26 @@ cloudinary.config({
 });
 
 // ⚙️ Multer setup (for handling file upload)
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+    files: 1
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      "application/pdf",
+      "application/zip",
+      "application/x-zip-compressed"
+    ];
+
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only PDF and ZIP files are allowed."));
+    }
+  }
+});
 
 // 📨 Email configuration
 const transporter = nodemailer.createTransport({
@@ -31,7 +50,6 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
-
 
 // 📧 Email route
 
