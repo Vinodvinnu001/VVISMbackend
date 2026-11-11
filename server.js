@@ -84,7 +84,8 @@ app.post("/send-mail", (req, res) => {
         applicantName,
         email,
         phone,
-        message
+        message,
+        payment_id,
       } = body;
 
       if (
@@ -187,6 +188,7 @@ app.post("/send-mail", (req, res) => {
             <tr><th>Email</th><td>${s.email}</td></tr>
             <tr><th>Phone</th><td>${s.phone}</td></tr>
             <tr><th>Message</th><td>${s.message}</td></tr>
+            <tr><th>Payment ID</th><td>${payment_id}</td></tr>
             <tr>
               <th>Attachment</th>
               <td>
@@ -242,6 +244,7 @@ app.post("/send-mail", (req, res) => {
             <li>Registration Number: ${s.regNumber}</li>
             <li>Course: ${s.course}</li>
             <li>Batch: ${s.batch}</li>
+            <li>Payment ID: <b>${payment_id}</b></li>
           </ul>
 
           <p>
