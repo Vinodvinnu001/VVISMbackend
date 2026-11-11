@@ -33,53 +33,6 @@ const transporter = nodemailer.createTransport({
 });
 
 
-app.get("/smtp-check", async (req, res) => {
-  try {
-    console.log("SMTP CHECK STARTED");
-
-    console.log("EMAIL_USER configured:",
-      Boolean(process.env.EMAIL_USER));
-
-    console.log("EMAIL_PASS configured:",
-      Boolean(process.env.EMAIL_PASS));
-
-    await transporter.verify();
-
-    console.log("SMTP CONNECTION SUCCESSFUL");
-
-    const info = await transporter.sendMail({
-      from: `"Vishwa Vishwani" <${process.env.EMAIL_USER}>`,
-      to: process.env.EMAIL_USER,
-      subject: "VVISM Vercel SMTP Test",
-      text: "Email sent successfully from Vercel backend."
-    });
-
-    console.log("EMAIL SENT:", info.messageId);
-
-    return res.status(200).json({
-      success: true,
-      message: "Vercel SMTP is working",
-      messageId: info.messageId
-    });
-
-  } catch (error) {
-    console.error("SMTP CHECK FAILED:", {
-      message: error.message,
-      code: error.code,
-      command: error.command,
-      response: error.response,
-      responseCode: error.responseCode
-    });
-
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-      code: error.code
-    });
-  }
-});
-
-
 // 📧 Email route
 app.post("/send-mail", upload.single("file"), async (req, res) => {
   try {
