@@ -83,7 +83,7 @@ app.post("/send-mail", upload.single("file"), async (req, res) => {
           <tr><th>Applicant Name</th><td>${applicantName}</td></tr>
           <tr><th>Email</th><td>${email}</td></tr>
           <tr><th>Phone</th><td>${phone}</td></tr>
-          <tr><th>Message</th><td>${message}</td></tr>
+          <tr><th>Message</th><td>${message}</td></tr> 
           <tr><th>Payment ID</th><td>${payment_id}</td></tr>
           <tr><th>Attachment File</th><td><a href="${fileUrl}" target="_blank">${fileUrl}</a></td></tr>
         </tbody>
