@@ -32,6 +32,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+
 // 📧 Email route
 
 app.post("/send-mail", (req, res) => {
