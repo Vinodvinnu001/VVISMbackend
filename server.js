@@ -33,111 +33,246 @@ const transporter = nodemailer.createTransport({
 });
 
 // 📧 Email route
-app.post("/send-mail", upload.single("file"), async (req, res) => {
-  try {
-    const {
-      studentName,
-      regNumber,
-      course,
-      batch,
-      applicantName,
-      email,
-      phone,
-      message,
-      payment_id,
-    } = req.body;
 
-    let fileUrl = "";
+app.post("/send-mail", (req, res) => {
 
-    // 🔼 Upload to Cloudinary (PDF or any file)
-    if (req.file) {
+  upload.single("file")(req, res, async (uploadError) => {
+
+    try {
+      // Handle file upload errors
+      if (uploadError) {
+        console.error("MULTER ERROR:", uploadError);
+
+        return res.status(400).json({
+          success: false,
+          message: uploadError.message
+        });
+      }
+
+      console.log("📩 SEND MAIL API CALLED");
+      console.log("Content Type:", req.headers["content-type"]);
+      console.log("Request Body:", req.body);
+      console.log("File Received:", Boolean(req.file));
+
+      // Validate request body
+      const body = req.body || {};
+
+      const {
+        studentName,
+        regNumber,
+        course,
+        batch,
+        applicantName,
+        email,
+        phone,
+        message
+      } = body;
+
+      if (
+        !studentName ||
+        !regNumber ||
+        !course ||
+        !batch ||
+        !applicantName ||
+        !email ||
+        !phone ||
+        !message
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Please provide all required certificate verification details.",
+          receivedFields: Object.keys(body)
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: "Please attach a PDF or ZIP certificate file."
+        });
+      }
+
+      // Upload certificate to Cloudinary
+      console.log("Uploading certificate to Cloudinary...");
+
       const uploadPromise = new Promise((resolve, reject) => {
+
         const uploadStream = cloudinary.uploader.upload_stream(
           {
             folder: "student_certificates",
-            resource_type: "raw", // ✅ crucial for PDFs / any non-image
+            resource_type: "raw"
           },
           (error, result) => {
             if (error) return reject(error);
             resolve(result);
           }
         );
-        streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
+
+        streamifier
+          .createReadStream(req.file.buffer)
+          .pipe(uploadStream);
+
       });
 
-      const result = await uploadPromise;
-      fileUrl = result.secure_url;
-      console.log("✅ File uploaded to Cloudinary:", fileUrl);
+      const cloudinaryResult = await uploadPromise;
+
+      const fileUrl = cloudinaryResult.secure_url;
+
+      console.log("✅ Cloudinary upload successful:", fileUrl);
+
+      // Prevent HTML injection in email content
+      const escapeHtml = (value) =>
+        String(value ?? "").replace(/[&<>"']/g, (char) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        })[char]);
+
+      const s = {
+        studentName: escapeHtml(studentName),
+        regNumber: escapeHtml(regNumber),
+        course: escapeHtml(course),
+        batch: escapeHtml(batch),
+        applicantName: escapeHtml(applicantName),
+        email: escapeHtml(email),
+        phone: escapeHtml(phone),
+        message: escapeHtml(message)
+      };
+
+      // Admin email
+      const adminMailOptions = {
+        from: `"Student Certificate Verification" <${process.env.EMAIL_USER}>`,
+        to: "eduverify@vishwavishwani.ac.in",
+        subject: `Student Certificate Verification from ${applicantName}`,
+
+        html: `
+          <p>Hello Vishwa Vishwani Team,</p>
+
+          <p>
+            Please check the Student Certificate Verification
+            details submitted by <b>${s.applicantName}</b>.
+          </p>
+
+          <table border="1" cellspacing="0" cellpadding="8">
+            <tr><th>Student Name</th><td>${s.studentName}</td></tr>
+            <tr><th>Registration Number</th><td>${s.regNumber}</td></tr>
+            <tr><th>Course</th><td>${s.course}</td></tr>
+            <tr><th>Batch</th><td>${s.batch}</td></tr>
+            <tr><th>Applicant Name</th><td>${s.applicantName}</td></tr>
+            <tr><th>Email</th><td>${s.email}</td></tr>
+            <tr><th>Phone</th><td>${s.phone}</td></tr>
+            <tr><th>Message</th><td>${s.message}</td></tr>
+            <tr>
+              <th>Attachment</th>
+              <td>
+                <a href="${fileUrl}" target="_blank">
+                  View Certificate
+                </a>
+              </td>
+            </tr>
+          </table>
+
+          <br/>
+          <p>Best regards,</p>
+          <b>Vishwa Vishwani Team</b>
+
+          <br/><br/>
+          <img
+            src="https://www.vishwavishwani.ac.in/pgdm/images/vvism-logo.webp"
+            width="180"
+            alt="Vishwa Vishwani Logo"
+          />
+        `
+      };
+
+      await transporter.sendMail(adminMailOptions);
+
+      console.log("✅ Admin email sent successfully");
+
+      // Applicant confirmation email
+      const applicantMailOptions = {
+        from: `"Vishwa Vishwani Institute of Systems and Management" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: "Certificate Verification Request Received",
+
+        html: `
+          <p>Dear <b>${s.applicantName}</b>,</p>
+
+          <p>
+            Thank you for submitting your certificate verification
+            request for <b>${s.studentName}</b>.
+          </p>
+
+          <p>
+            We have received your details successfully.
+            Our verification team will review your request
+            and get back to you shortly.
+          </p>
+
+          <br/>
+          <b>Submitted Details:</b>
+
+          <ul>
+            <li>Student Name: ${s.studentName}</li>
+            <li>Registration Number: ${s.regNumber}</li>
+            <li>Course: ${s.course}</li>
+            <li>Batch: ${s.batch}</li>
+          </ul>
+
+          <p>
+            Our team will respond within 2–3 working days.
+          </p>
+
+          <p>Thank you for reaching out to <b>Vishwa Vishwani</b>.</p>
+
+          <p>
+            Best regards,<br/>
+            <b>Vishwa Vishwani Institute of Systems and Management</b>
+          </p>
+
+          <img
+            src="https://www.vishwavishwani.ac.in/pgdm/images/vvism-logo.webp"
+            width="160"
+            alt="Vishwa Vishwani Logo"
+          />
+        `
+      };
+
+      await transporter.sendMail(applicantMailOptions);
+
+      console.log("✅ Applicant email sent successfully:", email);
+
+      return res.status(200).json({
+        success: true,
+        message: "Certificate verification request submitted successfully.",
+        adminEmailSent: true,
+        applicantEmailSent: true
+      });
+
+    } catch (error) {
+
+      console.error("❌ SEND MAIL ERROR:", {
+        message: error.message,
+        code: error.code,
+        response: error.response,
+        responseCode: error.responseCode
+      });
+
+      return res.status(500).json({
+        success: false,
+        message: "Certificate verification submission failed.",
+        error: error.message,
+        code: error.code || "UNKNOWN"
+      });
+
     }
 
-    // 📄 Email template
-    const htmlBodyAdmin  = `
-    <p>Hello Vishwa Vishwani Team,</p>
-    <p>Please check the Student Certificate Verification details from the applicant <b>${applicantName}</b></p>
-      <table border="1" cellspacing="0" cellpadding="8" align="middle">
-        <tbody>
-          <tr><th>Student Name</th><td>${studentName}</td></tr>
-          <tr><th>Reg Number</th><td>${regNumber}</td></tr>
-          <tr><th>Course</th><td>${course}</td></tr>
-          <tr><th>Batch</th><td>${batch}</td></tr>
-          <tr><th>Applicant Name</th><td>${applicantName}</td></tr>
-          <tr><th>Email</th><td>${email}</td></tr>
-          <tr><th>Phone</th><td>${phone}</td></tr>
-          <tr><th>Message</th><td>${message}</td></tr> 
-          <tr><th>Payment ID</th><td>${payment_id}</td></tr>
-          <tr><th>Attachment File</th><td><a href="${fileUrl}" target="_blank">${fileUrl}</a></td></tr>
-        </tbody>
-      </table>
-      <br/>
-      <p>Best regards,</p>
-      <p><b>Vishwa Vishwani Team</b></p>
-      <img src="https://www.vishwavishwani.ac.in/pgdm/images/vvism-logo.webp" alt="Vishwa Vishwani Logo" width="180" style="margin-top:10px;" />
-    `;
+  });
 
-    const adminMailOptions  = {
-      from: `"Student Certificate Verification" <${process.env.EMAIL_USER}>`,
-      to: "eduverify@vishwavishwani.ac.in",
-      subject: `Student Certificate Verification from ${applicantName}`,
-      html: htmlBodyAdmin,
-    };
-
-    await transporter.sendMail(adminMailOptions);
-    console.log("✅ Admin email sent successfully!");
-
-    // 📧 Send confirmation mail to Applicant
-    const applicantMailOptions = {
-      from: `"Vishwa Vishwani Institute of Systems And Management" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: "Certificate Verification Request Received",
-      html: `
-        <p>Dear <b>${applicantName}</b>,</p>
-        <p>Thank you for submitting your certificate verification request for <b>${studentName}</b>.</p>
-        <p>We have received your details successfully and our team will review and get back to you shortly.</p>
-        <br/>
-        <p><b>Submitted Details:</b></p>
-        <ul>
-          <li>Student Name: ${studentName}</li>
-          <li>Reg Number: ${regNumber}</li>
-          <li>Course: ${course}</li>
-          <li>Batch: ${batch}</li>
-          <li>Payment ID: <b>${payment_id}</b></li>
-        </ul>
-        <br/>
-        <p>Thank you for reaching out to <b>Vishwa Vishwani</b>.</p>
-        <p>Best regards,</p>
-        <p><b>Vishwa Vishwani Institute of Systems and Management</b></p>
-        <img src="https://drive.google.com/file/d/1bhCi407mjyA4XlQ_mHp1vp_5-I1s34N4/view?usp=drive_link" alt="Vishwa Vishwani Logo" width="160" style="margin-top:10px;" />
-      `,
-    };
-
-    await transporter.sendMail(applicantMailOptions);
-    console.log("✅ Confirmation mail sent to applicant:", email);
-    res.status(200).json({ success: true, message: "Email sent successfully" });
-  } catch (error) {
-    console.error("❌ Error:", error);
-    res.status(500).json({ success: false, error: error.message });
-  }
 });
+
 
 app.post("/send-brochure-link", async (req, res) => {
   try {
