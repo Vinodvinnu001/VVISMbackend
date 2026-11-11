@@ -56,7 +56,7 @@ const transporter = nodemailer.createTransport({
 app.post("/send-mail", (req, res) => {
 
   upload.single("file")(req, res, async (uploadError) => {
-
+  let currentStage = "Request received";
     try {
       // Handle file upload errors
       if (uploadError) {
@@ -115,7 +115,9 @@ app.post("/send-mail", (req, res) => {
       console.log("Uploading certificate to Cloudinary...");
 
       const uploadPromise = new Promise((resolve, reject) => {
+      currentStage = "Cloudinary upload";
 
+      console.log("Starting Cloudinary upload...");
         const uploadStream = cloudinary.uploader.upload_stream(
           {
             folder: "student_certificates",
@@ -138,6 +140,8 @@ app.post("/send-mail", (req, res) => {
       const fileUrl = cloudinaryResult.secure_url;
 
       console.log("✅ Cloudinary upload successful:", fileUrl);
+      console.log("Cloudinary upload completed");
+      currentStage = "Admin email sending";
 
       // Prevent HTML injection in email content
       const escapeHtml = (value) =>
@@ -159,7 +163,7 @@ app.post("/send-mail", (req, res) => {
         phone: escapeHtml(phone),
         message: escapeHtml(message)
       };
-
+      currentStage = "Applicant email sending";
       // Admin email
       const adminMailOptions = {
         from: `"Student Certificate Verification" <${process.env.EMAIL_USER}>`,
@@ -209,7 +213,7 @@ app.post("/send-mail", (req, res) => {
       await transporter.sendMail(adminMailOptions);
 
       console.log("✅ Admin email sent successfully");
-
+      currentStage = "Completed";
       // Applicant confirmation email
       const applicantMailOptions = {
         from: `"Vishwa Vishwani Institute of Systems and Management" <${process.env.EMAIL_USER}>`,
@@ -271,21 +275,22 @@ app.post("/send-mail", (req, res) => {
       });
 
     } catch (error) {
-
-      console.error("❌ SEND MAIL ERROR:", {
+      console.error("❌ CERTIFICATE VERIFICATION ERROR:", {
+        stage: currentStage,
         message: error.message,
         code: error.code,
+        name: error.name,
         response: error.response,
-        responseCode: error.responseCode
+        responseCode: error.responseCode,
+        stack: error.stack
       });
-
+    
       return res.status(500).json({
         success: false,
-        message: "Certificate verification submission failed.",
-        error: error.message,
+        stage: currentStage,
+        message: error.message,
         code: error.code || "UNKNOWN"
       });
-
     }
 
   });
